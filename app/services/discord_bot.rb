@@ -16,12 +16,36 @@ class DiscordBot
     )
 
     # Register the slash command
-    bot.register_application_command(:hello, 'Says hello')
+    bot.register_application_command(:hello, 'Says hello') do |cmd|
+      cmd.string(:text, 'Text to echo back', required: false)
+    end
 
     # Handle the command
     bot.application_command(:hello) do |event|
-      text = "Hi there #{event.user.username}"
+      text = "Hi there #{event.user.username}, channel ID: #{event.channel_id}, message: #{event.options["text"]}"
       event.respond(content: text)
+    end
+
+        # Register the slash command
+    bot.register_application_command(:add_drop, 'Record a received drop to earn points for your team') do |cmd|
+      cmd.string(:drop_name, 'Name of received drop', required: true)
+      cmd.attachment(:drop_photo, 'Photo of received drop', required: true)
+    end
+
+    # Handle the command
+    bot.application_command(:add_drop) do |event|
+      drop_photo_id = event.options["drop_photo"]
+      # [46] pry(DiscordBot)> event.resolved.attachments[1393701689034281071].proxy_url
+      image_url = event.resolved.attachments[drop_photo_id.to_i].proxy_url
+      channel_name = event.channel.name
+      text = "Received #{event.user.username}, channel name: #{channel_name}, drop: #{event.options["drop_name"]}, img_url: #{image_url}"
+      event.respond(content: text)
+
+      # event.channel.send_embed do |embed|
+      #   embed.title = "test"
+      #   embed.image = Discordrb::Webhooks::EmbedImage.new(url: 'https://example.com/image.png')
+      #   embed.color = 0x00bfff
+      # end
     end
 
 
