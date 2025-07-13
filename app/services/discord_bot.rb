@@ -47,7 +47,7 @@ class DiscordBot
       # text = "Received #{event.user.username}, channel name: #{team}, drop: #{event.options["drop_name"]}, img_url: #{image_url}"
       # text = "**#{username}** received **#{drop_name}**!!"
 
-    embed_title = "#{drop_name} received from #{team}!"
+    embed_title = "#{drop_name} received from ##{team}!"
     embed_description = "Submitted by **#{username}**"
     embed_color = 0x00bfff
     embed_timestamp = Time.now
@@ -68,7 +68,7 @@ class DiscordBot
     # Also post to review channel
     review_channel = event.bot.channel(WAR_REVIEW_CHANNEL_ID)
     review_channel.send_embed do |embed|
-      embed.title = embed_title
+      embed.title = "#{embed_title} React with ✅ to approve or ❌ to deny."
       embed.description = embed_description
       embed.image = Discordrb::Webhooks::EmbedImage.new(url: image_url)
       embed.color = embed_color
