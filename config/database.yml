@@ -85,4 +85,4 @@ production:
   <<: *default
   database: war_bot_production
   username: war_bot
-  password: <%= ENV["WAR_BOT_DATABASE_PASSWORD"] %>
+  password: <%= Rails.application.credentials.dig(:db, :password) %>
