@@ -55,8 +55,6 @@ module Commands
               sleep 1
               retry
             end
-          else
-            puts "[ERROR] Respond failed after retries: #{e.message}"
           end
 
           # Also post to review channel
