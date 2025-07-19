@@ -1,14 +1,12 @@
 require 'discordrb'
-require 'dotenv/load'
-require 'pry'
 
-require_relative '../commands/add_drop'
-require_relative '../commands/export_drops'
+require Rails.root.join('app/commands/add_drop.rb')
+require Rails.root.join('app/commands/export_drops.rb')
 
 class DiscordBot
-  BOT_TOKEN = ENV['DISCORD_BOT_TOKEN']
-  CLIENT_ID = ENV['DISCORD_CLIENT_ID']
-  GUILD_ID = ENV['DISCORD_GUILD_ID'].to_i # for guild command registration (dev/testing)
+  BOT_TOKEN  = Rails.application.credentials.dig(:discord, :discord_bot_token)
+  CLIENT_ID  = Rails.application.credentials.dig(:discord, :discord_client_id)
+  GUILD_ID   = Rails.application.credentials.dig(:discord, :guild_id).to_i
 
   def self.run
     bot = Discordrb::Commands::CommandBot.new(
@@ -18,8 +16,8 @@ class DiscordBot
     )
 
     # Register each command from its own module
-    Commands::AddDropCommand.register(bot)
-    Commands::ExportDropsCommand.register(bot)
+    ::Commands::AddDrop.register(bot)
+    ::Commands::ExportDrops.register(bot)
     bot.run
   end
 end

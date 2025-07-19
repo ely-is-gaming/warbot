@@ -1,7 +1,7 @@
 require 'csv'
 
 module Commands
-  class ExportDropsCommand
+  class ExportDrops
 
     def self.register(bot)
 

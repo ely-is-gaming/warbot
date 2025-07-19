@@ -1,5 +1,5 @@
 module Commands
-  class AddDropCommand
+  class AddDrop
     WAR_REVIEW_CHANNEL_ID = 1393812141311660052
     MAX_RETRIES = 2
 
