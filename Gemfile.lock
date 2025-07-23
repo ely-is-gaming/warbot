@@ -161,7 +161,6 @@ GEM
       racc (~> 1.4)
     opus-ruby (1.0.1)
       ffi
-    pg (1.5.9)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -223,6 +222,11 @@ GEM
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
     securerandom (0.4.1)
+    sqlite3 (2.7.3)
+      mini_portile2 (~> 2.8.0)
+    sqlite3 (2.7.3-arm64-darwin)
+    sqlite3 (2.7.3-x86_64-darwin)
+    sqlite3 (2.7.3-x86_64-linux-gnu)
     stringio (3.1.7)
     thor (1.3.2)
     timeout (0.4.3)
@@ -253,10 +257,10 @@ DEPENDENCIES
   csv
   discordrb
   dotenv-rails
-  pg (~> 1.1)
   pry (~> 0.15.0)
   puma (>= 5.0)
   rails (~> 7.2.2.1)
+  sqlite3
 
 BUNDLED WITH
    2.5.7

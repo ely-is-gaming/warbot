@@ -40,3 +40,6 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# Ignore local DBs
+*.sqlite3

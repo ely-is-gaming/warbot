@@ -1,19 +1,5 @@
-# PostgreSQL. Versions 9.3 and up are supported.
-#
-# Install the pg driver:
-#   gem install pg
-# On macOS with Homebrew:
-#   gem install pg -- --with-pg-config=/usr/local/bin/pg_config
-# On Windows:
-#   gem install pg
-#       Choose the win32 build.
-#       Install PostgreSQL and put its /bin directory on your path.
-#
-# Configure Using Gemfile
-# gem "pg"
-#
 default: &default
-  adapter: postgresql
+  adapter: sqlite3
   encoding: unicode
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
@@ -24,16 +10,15 @@ development:
   <<: *default
   username: ely
   password: dev
-  host: localhost
-  database: war_bot_development
+  database: <%= Rails.root.join("db", "data", "war_bot_development.sqlite3") %>
 
-  # The specified database role being used to connect to PostgreSQL.
-  # To create additional roles in PostgreSQL see `$ createuser --help`.
-  # When left blank, PostgreSQL will use the default role. This is
+  # The specified database role being used to connect to sqlite3.
+  # To create additional roles in sqlite3 see `$ createuser --help`.
+  # When left blank, sqlite3 will use the default role. This is
   # the same name as the operating system user running Rails.
   #username: war_bot
 
-  # The password associated with the PostgreSQL role (username).
+  # The password associated with the sqlite3 role (username).
   #password:
 
   # Connect on a TCP socket. Omitted by default since the client uses a
@@ -59,7 +44,7 @@ development:
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: war_bot_test
+  database: <%= Rails.root.join("db", "data", "war_bot_test.sqlite3") %>
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -83,6 +68,7 @@ test:
 #
 production:
   <<: *default
-  database: war_bot_production
+  # /mnt/ssd/warbot/production.sqlite3
+  database: <%= Rails.root.join("db", "data", "production.sqlite3") %>
   username: war_bot
   password: <%= Rails.application.credentials.dig(:db, :password) %>
