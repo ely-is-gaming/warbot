@@ -14,7 +14,7 @@ module Commands
           deputy_role = event.server.roles.find { |r| r.name == "Deputy Owners" }
           file_path = "/tmp/drops_#{Time.now.to_i}.csv"
 
-          unless member.role?(deputy_role)
+          unless deputy_role.present? && member&.role?(deputy_role)
             event.respond(content: "Sorry, you don't have permission to use this command.", ephemeral: true)
             next
           end
