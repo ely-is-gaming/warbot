@@ -1,6 +1,6 @@
 module Commands
   class AddDrop
-    WAR_REVIEW_CHANNEL_ID = 1393812141311660052
+    WAR_REVIEW_CHANNEL_ID = Rails.application.credentials.dig(:war_review_channel_id)
     MAX_RETRIES = 2
 
     def self.register(bot)
@@ -81,7 +81,7 @@ module Commands
           member = reaction_event.server.member(reaction_event.user.id)
           deputy_role = reaction_event.server.roles.find { |r| r.name == "Deputy Owners" }
 
-          next unless member.role?(deputy_role)
+          next unless deputy_role.present? && member&.role?(deputy_role)
 
           # I can't believe I'm making a switch case for an emoji
           emoji = reaction_event.emoji.name
