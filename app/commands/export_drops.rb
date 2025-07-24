@@ -15,9 +15,12 @@ module Commands
           file_path = "/tmp/drops_#{Time.now.to_i}.csv"
 
           unless deputy_role.present? && member&.role?(deputy_role)
+            Rails.logger.info("User #{event.server.member(event.user.id).display_name} tried to export_drops but lacked the correct role.")
             event.respond(content: "Sorry, you don't have permission to use this command.", ephemeral: true)
             next
           end
+
+          Rails.logger.info("User #{event.server.member(event.user.id).display_name} accessing all drops")
 
           # Generate the CSV file
           CSV.open(file_path, "wb") do |csv|

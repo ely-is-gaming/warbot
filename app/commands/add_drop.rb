@@ -8,6 +8,7 @@ module Commands
       bot.register_application_command(:add_drop, 'Record a received drop to earn points for your team') do |cmd|
         cmd.string(:drop_name, 'Name of received drop', required: true)
         cmd.attachment(:drop_photo, 'Photo of received drop', required: true)
+        cmd.string(:owner, 'Owner of received drop if different from submitter', required: false)
 
         bot.application_command(:add_drop) do |event|
           drop_photo_id = event.options["drop_photo"]
@@ -16,14 +17,20 @@ module Commands
           team = event.channel.name
           drop_name = event.options["drop_name"]
           # username = event.user.username
-          username = event.server.member(event.user.id).display_name
+          owner = event.options["owner"]
+          submitter = event.server.member(event.user.id).display_name
 
+          Rails.logger.info("Received drop #{drop_name} from submitter #{submitter}")
 
           # text = "Received #{event.user.username}, channel name: #{team}, drop: #{event.options["drop_name"]}, img_url: #{image_url}"
-          # text = "**#{username}** received **#{drop_name}**!!"
+          # text = "**#{submitter}** received **#{drop_name}**!!"
+
+          # create optional statement if owner of drop and submitter are different
+          dropped_by = " on behalf of #{owner}"
+          embed_description = "Submitted by **#{submitter}**"
+          embed_description = embed_description + dropped_by if owner.present?
 
           embed_title = "#{drop_name} received from ##{team}"
-          embed_description = "Submitted by **#{username}**"
           embed_color = 0x00bfff
           embed_timestamp = Time.now
 
@@ -88,11 +95,13 @@ module Commands
 
           case emoji
             when "✅"
+              Rails.logger.info("#{reaction_event.user.display_name} approved #{embed_title}")
               review_channel.send_message("✅ #{embed_title} approved by #{reaction_event.user.display_name}!")
-              save_drop(event, reaction_event, msg, true)
+              save_drop(event, reaction_event, msg, owner, true)
             when "❌"
+              Rails.logger.info("#{reaction_event.user.display_name} denied #{embed_title}")
               review_channel.send_message("❌ #{embed_title} denied by #{reaction_event.user.display_name}.")
-              save_drop(event, reaction_event, msg, false)
+              save_drop(event, reaction_event, msg, owner, false)
             else 
               next # ignore subsequent reactions after the initial one
             end
@@ -103,11 +112,16 @@ module Commands
       end
     end
 
-    def self.save_drop(event, reaction_event, message, approved)
+    def self.save_drop(event, reaction_event, message, owner=nil, approved)
       drop_photo_id = event.options["drop_photo"]
       drop_name = event.options["drop_name"]
       image_url = event.resolved.attachments[drop_photo_id.to_i].proxy_url
-      username = event.server.member(event.user.id).display_name      
+
+      # determine who owner is
+      # if owner != nil, owner is owner of drop
+      # otherwise the submitter is also the owner
+      submitter = event.server.member(event.user.id).display_name
+      owner = submitter unless owner.present?
       
       # create team if not exists
       team = Team.find_or_initialize_by(name: event.channel.name)
@@ -122,7 +136,7 @@ module Commands
       # look-up item (later we will not create the item because it'll be a pre-set list of items)
       item = Item.find_or_initialize_by(name: drop_name, category: 'unknown', points: 0)
       unless item.valid?
-        puts "Item #{item.name} is not valid due to: #{item.errors.full_messages.join("\n - ")}. Could not save drop"
+        Rails.logger.error("Item #{item.name} is not valid due to: #{item.errors.full_messages.join("\n - ")}. Could not save drop")
         return
       end
 
@@ -132,14 +146,14 @@ module Commands
       status = approved ? 'approved' : 'denied'
       puts "final status: #{status}"
 
-      drop = Drop.new(item: item, team: team, img_url: image_url, owner: username, reviewed_by: reaction_event.user.display_name, status: status)
+      drop = Drop.new(item: item, team: team, img_url: image_url, owner: owner, submitter: submitter, reviewed_by: reaction_event.user.display_name, status: status)
       unless drop.valid?
         puts "Drop ID #{drop.id} is not valid due to: #{drop.errors.full_messages.join("\n - ")}. Could not save drop"
         return
       end
 
       drop.save
-      puts "saved drop: #{drop.id}!"
+      Rails.logger.info("Saved drop: #{drop.item.name} at ID #{drop.id}")
     end
   end
 end

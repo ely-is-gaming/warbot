@@ -19,10 +19,6 @@ class DiscordBot
     ::Commands::AddDrop.register(bot)
     ::Commands::ExportDrops.register(bot)
 
-    bot.get_application_commands.each do |cmd|
-  puts "→ /#{cmd.name} (#{cmd.id})"
-end
-
     bot.run
   end
 end

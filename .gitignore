@@ -59,4 +59,6 @@ build-iPhoneSimulator/
 
 /config/credentials/development.key
 
-*.sqlite3
+db/data/*
+
+log/*
