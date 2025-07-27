@@ -24,7 +24,7 @@ module Commands
 
           # Generate the CSV file
           CSV.open(file_path, "wb") do |csv|
-            csv << ["ID", "Team", "Item", "Owner", "Reviewed By", "Status", "Image URL", "Created At"]
+            csv << ["ID", "Team", "Item", "Owner", "Submitter", "Reviewed By", "Status", "Image URL", "Created At"]
 
             Drop.includes(:team, :item).find_each do |drop|
               csv << [
@@ -32,6 +32,7 @@ module Commands
                 drop.team&.name,
                 drop.item&.name,
                 drop.owner,
+                drop.submitter,
                 drop.reviewed_by,
                 drop.status,
                 drop.img_url,
