@@ -5,7 +5,7 @@ module Commands
 
     def self.register(bot)
 
-      bot.register_application_command(:export_drops, 'View all the drops overall') do |cmd|
+      bot.register_application_command(:export_drops, 'View all submitted drops') do |cmd|
         bot.application_command(:export_drops) do |event|
           # Get the member who called the command
           member = event.user.on(event.server)

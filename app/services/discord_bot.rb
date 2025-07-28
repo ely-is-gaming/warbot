@@ -2,6 +2,7 @@ require 'discordrb'
 
 require Rails.root.join('app/commands/add_drop.rb')
 require Rails.root.join('app/commands/export_drops.rb')
+require Rails.root.join('app/commands/update_drop.rb')
 
 class DiscordBot
   BOT_TOKEN  = Rails.application.credentials.dig(:discord, :discord_bot_token)
@@ -18,6 +19,7 @@ class DiscordBot
     # Register each command from its own module
     ::Commands::AddDrop.register(bot)
     ::Commands::ExportDrops.register(bot)
+    ::Commands::UpdateDrop.register(bot)
 
     bot.run
   end
