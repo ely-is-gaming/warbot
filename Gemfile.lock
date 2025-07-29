@@ -85,6 +85,7 @@ GEM
     crass (1.0.6)
     csv (3.3.5)
     date (3.4.1)
+    diff-lcs (1.6.2)
     discordrb (3.5.0)
       discordrb-webhooks (~> 3.5.0)
       ffi (>= 1.9.24)
@@ -103,6 +104,11 @@ GEM
       cgi (>= 0.3.3)
     erubi (1.13.1)
     event_emitter (0.2.6)
+    factory_bot (6.5.4)
+      activesupport (>= 6.1.0)
+    factory_bot_rails (6.5.0)
+      factory_bot (~> 6.5)
+      railties (>= 6.1.0)
     ffi (1.17.2)
     ffi (1.17.2-arm64-darwin)
     ffi (1.17.2-x86_64-darwin)
@@ -221,6 +227,27 @@ GEM
       http-cookie (>= 1.0.2, < 2.0)
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
+    rspec (3.13.1)
+      rspec-core (~> 3.13.0)
+      rspec-expectations (~> 3.13.0)
+      rspec-mocks (~> 3.13.0)
+    rspec-core (3.13.5)
+      rspec-support (~> 3.13.0)
+    rspec-expectations (3.13.5)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-mocks (3.13.5)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-rails (8.0.1)
+      actionpack (>= 7.2)
+      activesupport (>= 7.2)
+      railties (>= 7.2)
+      rspec-core (~> 3.13)
+      rspec-expectations (~> 3.13)
+      rspec-mocks (~> 3.13)
+      rspec-support (~> 3.13)
+    rspec-support (3.13.4)
     securerandom (0.4.1)
     sqlite3 (2.7.3)
       mini_portile2 (~> 2.8.0)
@@ -257,9 +284,12 @@ DEPENDENCIES
   csv
   discordrb
   dotenv-rails
+  factory_bot_rails
   pry (~> 0.15.0)
   puma (>= 5.0)
   rails (~> 7.2.2.1)
+  rspec (~> 3.13)
+  rspec-rails
   sqlite3
 
 BUNDLED WITH

@@ -35,6 +35,7 @@ gem 'csv'
 group :development, :test do
     gem 'dotenv-rails'
     gem 'pry', '~> 0.15.0'
+    gem "rspec", "~> 3.13"
+    gem 'rspec-rails'
+    gem 'factory_bot_rails'
 end
-
-

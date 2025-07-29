@@ -21,6 +21,6 @@ class DiscordBot
     ::Commands::ExportDrops.register(bot)
     ::Commands::UpdateDrop.register(bot)
 
-    bot.run
+    bot.run unless Rails.env.test?
   end
 end
