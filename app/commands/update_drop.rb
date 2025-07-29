@@ -10,10 +10,9 @@ module Commands
             cmd.string(:submitter, 'update submitter', required: false)
             cmd.string(:reviewed_by, 'update reviewed_by', required: false)
             cmd.string(:status, 'update status (approved or denied)', required: false)
-
-            bot.application_command(:update_drop) do |event|
-                  UpdateDrop.call(event)
-            end
+        end
+        bot.application_command(:update_drop) do |event|
+            UpdateDrop.call(event)
         end
     end
 
