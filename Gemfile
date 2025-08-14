@@ -14,7 +14,7 @@ gem "puma", ">= 5.0"
 
 gem 'sqlite3'
 
-gem 'activerecord', '~> 7.0' 
+gem 'activerecord', '~> 7.2' 
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
