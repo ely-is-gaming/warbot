@@ -35,7 +35,7 @@ module Commands
                 drop.submitter,
                 drop.reviewed_by,
                 drop.status,
-                drop.item.points,
+                drop.item&.points || 0,
                 drop.img_url,
                 drop.created_at
               ]
