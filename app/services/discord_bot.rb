@@ -5,6 +5,7 @@ require Rails.root.join('app/commands/export_drops.rb')
 require Rails.root.join('app/commands/update_drop.rb')
 require Rails.root.join('app/commands/roll.rb')
 require Rails.root.join('app/commands/undo_roll.rb')
+require Rails.root.join('app/commands/roll_history.rb')
 
 
 class DiscordBot
@@ -25,6 +26,7 @@ class DiscordBot
     ::Commands::UpdateDrop.register(bot)
     ::Commands::Roll.register(bot)
     ::Commands::UndoRoll.register(bot)
+    ::Commands::RollHistory.register(bot)
 
     bot.run unless Rails.env.test?
   end
