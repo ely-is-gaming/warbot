@@ -3,6 +3,7 @@ require 'discordrb'
 require Rails.root.join('app/commands/add_drop.rb')
 require Rails.root.join('app/commands/export_drops.rb')
 require Rails.root.join('app/commands/update_drop.rb')
+require Rails.root.join('app/commands/roll.rb')
 
 class DiscordBot
   BOT_TOKEN  = Rails.application.credentials.dig(:discord, :discord_bot_token)
@@ -20,6 +21,7 @@ class DiscordBot
     ::Commands::AddDrop.register(bot)
     ::Commands::ExportDrops.register(bot)
     ::Commands::UpdateDrop.register(bot)
+    ::Commands::Roll.register(bot)
 
     bot.run unless Rails.env.test?
   end

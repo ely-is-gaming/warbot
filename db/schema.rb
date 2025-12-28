@@ -10,13 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_24_040648) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_28_161359) do
   create_table "completed_sets", force: :cascade do |t|
     t.string "name"
     t.integer "team_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["team_id"], name: "index_completed_sets_on_team_id"
+  end
+
+  create_table "dice_rolls", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.integer "roll"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id"], name: "index_dice_rolls_on_team_id"
   end
 
   create_table "drops", force: :cascade do |t|
@@ -50,6 +58,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_24_040648) do
   end
 
   add_foreign_key "completed_sets", "teams"
+  add_foreign_key "dice_rolls", "teams"
   add_foreign_key "drops", "items"
   add_foreign_key "drops", "teams"
   add_foreign_key "items", "completed_sets"
