@@ -6,6 +6,7 @@ module Commands
             bot.register_application_command(:roll, 'Roll for a new tile to complete!') do |cmd|
                 bot.application_command(:roll) do |event|
                     rolled_by = event.server.member(event.user.id).display_name
+                    embed_color = 0x00bfff
 
                     # create team if not exists
                     team = Team.find_or_initialize_by(name: event.channel.name)
@@ -29,6 +30,17 @@ module Commands
 
                     saved_roll.save
                     # log
+                    event.respond(
+                        embeds: [
+                            {
+                                title: "Team #{team.name} rolled a #{roll}!",
+                                description: "Next objective: XYZ",
+                                # image: { url: blah },
+                                color: embed_color,
+                                timestamp: saved_roll.created_at.iso8601
+                            }
+                        ]
+                    )
                     Rails.logger.info("Saved roll - team #{team.name} rolled a #{roll}!")
                 end
             end
