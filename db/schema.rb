@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_12_28_184030) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_14_051951) do
   create_table "completed_sets", force: :cascade do |t|
     t.string "name"
     t.integer "team_id", null: false
@@ -62,6 +62,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_12_28_184030) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "image_path"
+    t.integer "modifier", default: 0, null: false
+    t.integer "conditional_modifier", default: 0, null: false
   end
 
   add_foreign_key "completed_sets", "teams"

@@ -13,6 +13,10 @@ Things you may want to cover:
 
 * Database creation
 
+1. bin/rails db:create
+2. bin/rails db:migrate
+3. bin/rails db:seed
+
 * Database initialization
 
 * How to run the test suite
