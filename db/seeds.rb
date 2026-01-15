@@ -11,12 +11,13 @@
 # db/seeds.rb
 
 tiles = [
+  { name: "START", modifier: 0, conditional_modifier: 0, image_path: "https://media.discordapp.net/attachments/1310485470047768606/1454585208954290303/image.png?ex=69695a8a&is=6968090a&hm=ebd120f721a5878351266f833fd1a20c1de999472117d6f8a32811ca490dced9&=&format=webp&quality=lossless&width=539&height=472" },
   { name: "3 MOONS ITEMS", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/thumb/Lunar_Chest_%28closed%29.png/640px-Lunar_Chest_%28closed%29.png?19bbc" },
   { name: "3 BARROWS ITEMS", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/thumb/Barrows_minigame.png/300px-Barrows_minigame.png?f7aaf" },
   { name: "3 DKS RINGS", modifier: 0, conditional_modifier: 0, image_path: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBkWFqSFk0MYcIsMhhwk5xnShkbCpuxN0guQ&s" },
   { name: "GO BACK 2 TILES", modifier: -2, conditional_modifier: 0, image_path: "https://cdn-icons-png.freepik.com/256/10393/10393160.png" },
   { name: "CREATE & POST OSRS MEME IN DISC", modifier: 0, conditional_modifier: 0, image_path: "https://preview.redd.it/can-anyone-give-me-your-best-meme-images-like-this-classic-v0-25nq3oa4y9df1.jpeg?width=640&crop=smart&auto=webp&s=413b07373e598535fc75d51ccddead0c306302e5" },
-  { name: "COMPLETE TWINFLAME STAFF", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/thumb/Royal_Titans_artwork.jpg/300px-Royal_Titans_artwork.jpg?3dabf" },
+  { name: "COMPLETE TWINFLAME STAFF", modifier: 0, conditional_modifier: 0, image_path: "https://media.discordapp.net/attachments/1309805953377505314/1438340772284862605/image.png?ex=6968ec7b&is=69679afb&hm=dc53b773090a77f50ff31aa6a79b27e62f36a25e98bab958dbe432c9d70f5ce2&=&format=webp&quality=lossless&width=1274&height=1260" },
   { name: "ZENYTE SHARD", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/Zenyte_shard.png?8abb8" },
   { name: "ZULRAH UNIQUE", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/Venom_cloud.png?0bae0" },
   { name: "ANY ABYSSAL DYE", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/thumb/Guardians_of_the_Rift_Launch_%281%29.jpg/400px-Guardians_of_the_Rift_Launch_%281%29.jpg?1e0f7" },
@@ -44,7 +45,7 @@ tiles = [
   { name: "NIGHTMARE ORB", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/thumb/Fighting_The_Nightmare.png/300px-Fighting_The_Nightmare.png?152f0" },
   { name: "ToB PURPLE", modifier: 0, conditional_modifier: 0, image_path: "https://media.discordapp.net/attachments/1310485470047768606/1429309397011664987/image.png?ex=69685e1b&is=69670c9b&hm=9ab8747477ca84588e742b114c2777b402fa8343ae1f669191ba9053f98b3a41&=&format=webp&quality=lossless&width=1416&height=1389" },
   { name: "ANY SIGIL FROM CORP", modifier: 0, conditional_modifier: 0, image_path: "https://media.discordapp.net/attachments/1310485470047768606/1437192380003520512/image.png?ex=69680ab5&is=6966b935&hm=941ff5456aff1fe523b42a9d8e83eba4c59eb90c1dd925212bf1d57a7661256a&=&format=webp&quality=lossless&width=1579&height=1174" },
-  { name: "FINISH", modifier: 0, conditional_modifier: 0, image_path: "https://oldschool.runescape.wiki/images/thumb/Gold_speedrun_trophy_detail.png/800px-Gold_speedrun_trophy_detail.png?0afd8" }
+  { name: "FINISH", modifier: 0, conditional_modifier: 0, image_path: "https://media.discordapp.net/attachments/1309808330822385675/1461010044681322656/content.png?ex=6968ff22&is=6967ada2&hm=31610d85bceed6d3069ab68fd20631eeb1a49ca0f79aa7114dca1e1ae9cfadb3&=&format=webp&quality=lossless&width=315&height=472" }
 ]
 
 

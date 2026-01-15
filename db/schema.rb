@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_14_051951) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_15_002726) do
   create_table "completed_sets", force: :cascade do |t|
     t.string "name"
     t.integer "team_id", null: false
@@ -55,6 +55,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_14_051951) do
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "current_tile"
   end
 
   create_table "tiles", force: :cascade do |t|
