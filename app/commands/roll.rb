@@ -1,7 +1,7 @@
+# app/commands/roll.rb
 module Commands
   class Roll
-    MAX_ROLL    = 4
-    TOTAL_TILES = 34
+    MAX_ROLL = 4
 
     def self.register(bot)
       bot.register_application_command(:roll, 'Roll for a new tile to complete!') do |_cmd|
@@ -19,91 +19,87 @@ module Commands
           team.current_tile ||= 0
           team.save! if team.changed?
 
-          roll = rand(1..MAX_ROLL)
-          modifier_applied = 0
-
-          Team.transaction do
-            team.lock!
-
-            # create the main dice roll
-            DiceRoll.create!(team: team, roll: roll)
-
-            # move forward by dice
-            team.current_tile += roll
-
-            # clamp to max tile
-            team.current_tile = [team.current_tile, TOTAL_TILES - 1].min
-
-            # resolve landed tile
-            tiles = Tile.order(:id).to_a
-            landed_tile = tiles[team.current_tile]
-
-            # apply unconditional modifier if present
-            if landed_tile.modifier.present? && landed_tile.modifier != 0
-              modifier_applied = landed_tile.modifier
-              team.current_tile += modifier_applied
-              team.current_tile = [[team.current_tile, 0].max, TOTAL_TILES - 1].min
-
-              # log modifier as its own roll
-              DiceRoll.create!(team: team, roll: modifier_applied)
-            end
-
-            team.save!
-          end
-
-          # final tile after any modifier
+          # load tiles dynamically
           tiles = Tile.order(:id).to_a
-          final_tile_index = [team.current_tile, TOTAL_TILES - 1].min
-          final_tile = tiles[final_tile_index]
+          total_tiles = tiles.size
+          original_tile_index = team.current_tile
 
-          # build embed title and description
-          title =
-            if team.current_tile >= TOTAL_TILES
-              "🎉 CONGRATULATIONS! You reached the final tile!"
-            else
-              "Next objective: #{final_tile.name}"
-            end
+          # --- ROLL ---
+          roll = rand(1..MAX_ROLL)
+          DiceRoll.create!(team: team, roll: roll)
 
-          description = "Team **#{team.name}** rolled a **#{roll}**."
-          if modifier_applied != 0
+          # move forward
+          from_tile_index = team.current_tile
+          team.current_tile += roll
+          team.current_tile = [[team.current_tile, 0].max, total_tiles - 1].min
+          to_tile_index = team.current_tile
+
+          description = "Team **#{team.name}** rolled a **#{roll}**.\n"
+          description += "📍 Current tile: **#{to_tile_index}** (#{tiles[to_tile_index]&.name || 'unknown'})"
+
+          # --- UNCONDITIONAL MODIFIER ---
+          landed_tile = tiles[team.current_tile]
+          modifier_applied = 0
+          if landed_tile.modifier.present? && landed_tile.modifier != 0
+            modifier_applied = landed_tile.modifier
+            from_tile_index = team.current_tile
+            team.current_tile += modifier_applied
+            team.current_tile = [[team.current_tile, 0].max, total_tiles - 1].min
+            to_tile_index = team.current_tile
+
+            DiceRoll.create!(team: team, roll: modifier_applied)
             direction = modifier_applied.positive? ? "forward" : "back"
-            description += "\n⚠️ **Tile effect:** move #{direction} #{modifier_applied.abs} space#{'s' if modifier_applied.abs != 1}."
+            description += "\n⚠️ Tile effect: move #{direction} #{modifier_applied.abs} space#{'s' if modifier_applied.abs != 1}."
+            description += "\n📍 Current tile: **#{to_tile_index}** (#{tiles[to_tile_index]&.name || 'unknown'})"
           end
-          description += "\n📍 Current position: **Tile #{team.current_tile}**"
 
-          embed = {
-            title: title,
-            description: description,
-            color: embed_color,
-            image: final_tile.image_path.present? ? { url: final_tile.image_path } : nil,
-            timestamp: Time.now.iso8601
-          }.compact
+          team.save!
 
-          # send embed
-          embed_msg = event.edit_response(embeds: [embed])
+          # --- TITLE ---
+          final_tile = tiles[team.current_tile]
+          title = if team.current_tile >= total_tiles - 1
+                    "🎉 CONGRATULATIONS! You reached the final tile!"
+                  else
+                    "Next objective: #{final_tile.name}"
+                  end
 
-          # handle conditional modifier (negative with emoji)
+          # --- SEND EMBED ---
+          event.edit_response(
+            embeds: [
+              {
+                title: title,
+                description: description,
+                color: embed_color,
+                image: final_tile.image_path.present? ? { url: final_tile.image_path } : nil,
+                timestamp: Time.now.iso8601
+              }.compact
+            ]
+          )
+
+          # --- CONDITIONAL MODIFIER ---
           if final_tile.conditional_modifier.present? && final_tile.conditional_modifier < 0
             arrow_msg = event.channel.send_message(
-              "This tile has a special effect! React with ⬅️ to move back #{final_tile.conditional_modifier.abs} tile#{'s' if final_tile.conditional_modifier.abs != 1} or complete the tile and continue onwards."
+              "This tile has a special effect! React with ⬅️ to move back #{final_tile.conditional_modifier.abs} tile#{'s' if final_tile.conditional_modifier.abs != 1}, or continue without applying it."
             )
             arrow_msg.create_reaction("⬅️")
 
             bot.add_await!(Discordrb::Events::ReactionAddEvent) do |reaction_event|
               next unless reaction_event.message.id == arrow_msg.id
               next unless reaction_event.channel.id == event.channel.id
-              next unless reaction_event.user.id == event.user.id # only roller can trigger
+              next unless reaction_event.user.id == event.user.id # only roller
 
               # apply conditional modifier
+              from_tile_index = team.current_tile
               team.current_tile += final_tile.conditional_modifier
-              team.current_tile = [[team.current_tile, 0].max, TOTAL_TILES - 1].min
+              team.current_tile = [[team.current_tile, 0].max, total_tiles - 1].min
+              to_tile_index = team.current_tile
               team.save!
 
               reaction_event.channel.send_message(
-                "✅ Conditional effect applied! Team **#{team.name}** moved to tile **#{team.current_tile}** (#{Tile.find_by(id: team.current_tile)&.name || 'unknown'})."
+                "✅ Conditional effect applied!\n📍 Current tile: **#{to_tile_index}** (#{tiles[to_tile_index]&.name || 'unknown'})"
               )
 
-              true # resolve await
+              true
             end
           end
 
