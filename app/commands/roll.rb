@@ -13,102 +13,101 @@ module Commands
           team = Team.find_or_initialize_by(name: event.channel.name)
           unless team.valid?
             Rails.logger.error("Invalid team #{team.name}: #{team.errors.full_messages.join(', ')}")
-            event.edit_response(content: "⚠️ Error with the team data.")
             next
           end
+
           team.current_tile ||= 0
           team.save! if team.changed?
 
           roll = rand(1..MAX_ROLL)
-
-          landed_tile = nil
           modifier_applied = 0
 
           Team.transaction do
             team.lock!
 
-            # record dice roll
+            # create the main dice roll
             DiceRoll.create!(team: team, roll: roll)
 
-            # move forward
+            # move forward by dice
             team.current_tile += roll
 
-            # clamp
+            # clamp to max tile
             team.current_tile = [team.current_tile, TOTAL_TILES - 1].min
 
-            # resolve tile
+            # resolve landed tile
             tiles = Tile.order(:id).to_a
             landed_tile = tiles[team.current_tile]
 
-            # apply unconditional modifier
+            # apply unconditional modifier if present
             if landed_tile.modifier.present? && landed_tile.modifier != 0
               modifier_applied = landed_tile.modifier
               team.current_tile += modifier_applied
               team.current_tile = [[team.current_tile, 0].max, TOTAL_TILES - 1].min
 
+              # log modifier as its own roll
               DiceRoll.create!(team: team, roll: modifier_applied)
             end
 
             team.save!
           end
 
-          final_tile = Tile.order(:id).to_a[team.current_tile]
+          # final tile after any modifier
+          tiles = Tile.order(:id).to_a
+          final_tile_index = [team.current_tile, TOTAL_TILES - 1].min
+          final_tile = tiles[final_tile_index]
 
-          # build description
-          description = "Team **#{team.name}** rolled a **#{roll}**."
-          if modifier_applied != 0
-            direction = modifier_applied.positive? ? "forward" : "back"
-            description += "\n\n⚠️ Tile effect: move #{direction} #{modifier_applied.abs} tile#{'s' if modifier_applied.abs != 1}."
-          end
-          description += "\n📍 Current position: **Tile #{team.current_tile}**"
-
-          # handle conditional modifier
-          if final_tile.conditional_modifier != 0
-            description += "\n⚠️ Conditional effect! React with ⬅️ to move #{final_tile.conditional_modifier.abs} tile#{'s' if final_tile.conditional_modifier.abs != 1} and claim the item."
-          end
-
+          # build embed title and description
           title =
             if team.current_tile >= TOTAL_TILES
-              "🎉 CONGRATULATIONS! You've reached the end!"
+              "🎉 CONGRATULATIONS! You reached the final tile!"
             else
               "Next objective: #{final_tile.name}"
             end
 
+          description = "Team **#{team.name}** rolled a **#{roll}**."
+          if modifier_applied != 0
+            direction = modifier_applied.positive? ? "forward" : "back"
+            description += "\n⚠️ **Tile effect:** move #{direction} #{modifier_applied.abs} space#{'s' if modifier_applied.abs != 1}."
+          end
+          description += "\n📍 Current position: **Tile #{team.current_tile}**"
+
+          embed = {
+            title: title,
+            description: description,
+            color: embed_color,
+            image: final_tile.image_path.present? ? { url: final_tile.image_path } : nil,
+            timestamp: Time.now.iso8601
+          }.compact
+
           # send embed
-          response = event.edit_response(
-            embeds: [
-              {
-                title: title,
-                description: description,
-                color: embed_color,
-                image: final_tile.image_path.present? ? { url: final_tile.image_path } : nil,
-                timestamp: Time.now.iso8601
-              }.compact
-            ]
-          )
+          embed_msg = event.edit_response(embeds: [embed])
 
-          Rails.logger.info("Team #{team.name} rolled #{roll}, modifier #{modifier_applied}, now on tile #{team.current_tile}")
+          # handle conditional modifier (negative with emoji)
+          if final_tile.conditional_modifier.present? && final_tile.conditional_modifier < 0
+            arrow_msg = event.channel.send_message(
+              "This tile has a special effect! React with ⬅️ to move back #{final_tile.conditional_modifier.abs} tile#{'s' if final_tile.conditional_modifier.abs != 1} or complete the tile and continue onwards."
+            )
+            arrow_msg.create_reaction("⬅️")
 
-          # wait for conditional reaction if present
-          if final_tile.conditional_modifier != 0
-            handler = bot.add_await!(Discordrb::Events::ReactionAddEvent) do |reaction_event|
-              next unless reaction_event.message.id == response.id
-              next unless reaction_event.user.id == event.user.id
-              next unless reaction_event.emoji.name == "⬅️"
+            bot.add_await!(Discordrb::Events::ReactionAddEvent) do |reaction_event|
+              next unless reaction_event.message.id == arrow_msg.id
+              next unless reaction_event.channel.id == event.channel.id
+              next unless reaction_event.user.id == event.user.id # only roller can trigger
 
-              # apply conditional move
+              # apply conditional modifier
               team.current_tile += final_tile.conditional_modifier
               team.current_tile = [[team.current_tile, 0].max, TOTAL_TILES - 1].min
               team.save!
 
-              DiceRoll.create!(team: team, roll: final_tile.conditional_modifier)
-
-              event.channel.send_message(
-                "✅ Conditional move applied! Team **#{team.name}** moved #{final_tile.conditional_modifier} tiles and claimed the item!"
+              reaction_event.channel.send_message(
+                "✅ Conditional effect applied! Team **#{team.name}** moved to tile **#{team.current_tile}** (#{Tile.find_by(id: team.current_tile)&.name || 'unknown'})."
               )
-              true
+
+              true # resolve await
             end
           end
+
+          Rails.logger.info("Team #{team.name} rolled #{roll}, modifier #{modifier_applied}, now on tile #{team.current_tile}")
         end
       end
     end
