@@ -2,6 +2,7 @@
 module Commands
   class Roll
     MAX_ROLL = 4
+    MAX_MYSTERY_TILES = 6
 
     def self.register(bot)
       bot.register_application_command(:roll, 'Roll for a new tile to complete!') do |_cmd|
@@ -31,6 +32,8 @@ module Commands
           # move forward
           from_tile_index = team.current_tile
           team.current_tile += roll
+          # reset mystery tile
+          team.current_mystery_id = nil
           team.current_tile = [[team.current_tile, 0].max, total_tiles - 1].min
           to_tile_index = team.current_tile
 
@@ -53,8 +56,6 @@ module Commands
             description += "\n📍 Current tile: **#{to_tile_index}** (#{tiles[to_tile_index]&.name || 'unknown'})"
           end
 
-          team.save!
-
           # --- TITLE ---
           final_tile = tiles[team.current_tile]
           title = if team.current_tile >= total_tiles - 1
@@ -63,6 +64,22 @@ module Commands
                     "Next objective: #{final_tile.name}"
                   end
 
+          # --- HANDLE MYSTERY ---
+          if final_tile.mystery?
+            # roll dice off mystery table!
+            total_mystery_tiles = MAX_MYSTERY_TILES
+            mystery_roll = rand(1..total_mystery_tiles)
+            mystery_tile = MysteryTile.find_by_id(mystery_roll)
+            team.current_mystery_id = mystery_tile&.id
+
+            if mystery_tile
+              # override title and description for mystery tile
+              title = "🕵️ Mystery Tile: #{mystery_tile.name}"
+            end
+          end
+
+          team.save!
+          
           # --- SEND EMBED ---
           event.edit_response(
             embeds: [
