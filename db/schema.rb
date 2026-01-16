@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_15_002726) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_16_154153) do
   create_table "completed_sets", force: :cascade do |t|
     t.string "name"
     t.integer "team_id", null: false
@@ -51,11 +51,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_15_002726) do
     t.index ["completed_set_id"], name: "index_items_on_completed_set_id"
   end
 
+  create_table "mystery_tiles", force: :cascade do |t|
+    t.string "name"
+    t.string "image_path"
+    t.integer "modifier"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "teams", force: :cascade do |t|
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "current_tile", default: 0
+    t.integer "current_mystery_id"
+    t.index ["current_mystery_id"], name: "index_teams_on_current_mystery_id"
   end
 
   create_table "tiles", force: :cascade do |t|
@@ -65,6 +75,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_15_002726) do
     t.string "image_path"
     t.integer "modifier", default: 0, null: false
     t.integer "conditional_modifier", default: 0, null: false
+    t.boolean "mystery", default: false
   end
 
   add_foreign_key "completed_sets", "teams"
@@ -72,4 +83,5 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_15_002726) do
   add_foreign_key "drops", "items"
   add_foreign_key "drops", "teams"
   add_foreign_key "items", "completed_sets"
+  add_foreign_key "teams", "mystery_tiles", column: "current_mystery_id"
 end
