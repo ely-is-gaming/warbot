@@ -6,6 +6,8 @@ require Rails.root.join('app/commands/update_drop.rb')
 require Rails.root.join('app/commands/roll.rb')
 require Rails.root.join('app/commands/undo_roll.rb')
 require Rails.root.join('app/commands/roll_history.rb')
+require Rails.root.join('app/commands/current_tile.rb')
+require Rails.root.join('app/commands/set_tile.rb')
 
 
 class DiscordBot
@@ -27,6 +29,8 @@ class DiscordBot
     ::Commands::Roll.register(bot)
     ::Commands::UndoRoll.register(bot)
     ::Commands::RollHistory.register(bot)
+    ::Commands::CurrentTile.register(bot)
+    ::Commands::SetTile.register(bot)
 
     bot.run unless Rails.env.test?
   end

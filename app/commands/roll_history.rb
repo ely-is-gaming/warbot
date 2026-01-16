@@ -22,15 +22,35 @@ module Commands
 
           Rails.logger.info("User #{event.server.member(event.user.id).display_name} accessing roll history")
 
+          tiles = Tile.order(:id).to_a
+
+          # Track current tile PER TEAM while iterating rolls
+          team_positions = Hash.new(0)
+
           # Generate the CSV file
           CSV.open(file_path, "wb") do |csv|
-            csv << ["ID", "Team", "Roll", "Created At"]
+            csv << ["ID", "Team", "Roll", "Tile Index After Roll", "Tile Name", "Created At"]
 
-            DiceRoll.includes(:team).find_each do |dr|
+            DiceRoll.includes(:team).order(:id).find_each do |dr|
+              team = dr.team
+              next unless team
+
+              # advance tile for this team
+              team_positions[team.id] += dr.roll
+
+              # clamp bounds
+              team_positions[team.id] =
+                [[team_positions[team.id], 0].max, tiles.length - 1].min
+
+              tile_index = team_positions[team.id]
+              tile = tiles[tile_index]
+
               csv << [
                 dr.id,
-                dr.team&.name,
+                team.name,
                 dr.roll,
+                tile_index,
+                tile&.name || "Unknown tile",
                 dr.created_at
               ]
             end
