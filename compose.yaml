@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        BUNDLE_WITHOUT: ""
+    environment:
+      RAILS_ENV: development
+      REDIS_URL: redis://redis:6379/0
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:?set RAILS_MASTER_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  redis:
+    image: valkey/valkey:9.0.3-alpine
+    command: valkey-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:

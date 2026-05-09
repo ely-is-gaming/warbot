@@ -71,4 +71,4 @@ production:
   # /mnt/ssd/warbot/production.sqlite3
   database: <%= Rails.root.join("db", "data", "production.sqlite3") %>
   username: war_bot
-  password: <%= Rails.application.credentials.dig(:db, :password) %>
+  password: <%= ENV["DATABASE_PASSWORD"] || (Rails.application.credentials.dig(:db, :password) if Rails.env.production?) %>

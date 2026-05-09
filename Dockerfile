@@ -11,7 +11,8 @@ WORKDIR /app
 
 # Copy Gemfiles and install gems
 COPY Gemfile Gemfile.lock ./
-RUN bundle config set without 'development test'
+ARG BUNDLE_WITHOUT="development test"
+RUN if [ -n "$BUNDLE_WITHOUT" ]; then bundle config set without "$BUNDLE_WITHOUT"; fi
 RUN bundle install
 
 # Copy app code

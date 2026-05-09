@@ -1,31 +1,24 @@
 module Commands
   class AddDrop
-    WAR_REVIEW_CHANNEL_ID = Rails.application.credentials.dig(:war_review_channel_id)
-    MAX_RETRIES = 2
-
     def self.register(bot)
-
+      # Slash command used by players when they receive a drop during war.
       bot.register_application_command(:add_drop, 'Record a received drop to earn points for your team') do |cmd|
         cmd.string(:drop_name, 'Name of received drop', required: true)
         cmd.attachment(:drop_photo, 'Photo of received drop', required: true)
         cmd.string(:owner, 'Owner of received drop if different from submitter', required: false)
 
         bot.application_command(:add_drop) do |event|
+          # Discord stores attachment details in the resolved payload; the option value is the attachment id.
           drop_photo_id = event.options["drop_photo"]
-          # [46] pry(DiscordBot)> event.resolved.attachments[1393701689034281071].proxy_url
           image_url = event.resolved.attachments[drop_photo_id.to_i].proxy_url
           team = event.channel.name
           drop_name = event.options["drop_name"]
-          # username = event.user.username
           owner = event.options["owner"]
           submitter = event.server.member(event.user.id).display_name
 
           Rails.logger.info("Received drop #{drop_name} from submitter #{submitter}")
 
-          # text = "Received #{event.user.username}, channel name: #{team}, drop: #{event.options["drop_name"]}, img_url: #{image_url}"
-          # text = "**#{submitter}** received **#{drop_name}**!!"
-
-          # create optional statement if owner of drop and submitter are different
+          # Include the owner only when someone submits a drop on another player's behalf.
           dropped_by = " on behalf of #{owner}"
           embed_description = "Submitted by **#{submitter}**"
           embed_description = embed_description + dropped_by if owner.present?
@@ -40,32 +33,21 @@ module Commands
             next
           end
 
-          tries = 0
-          
-          # Respond in current channel
-          begin
-            event.respond(
-              embeds: [
-                {
-                  title: "#{embed_title}!",
-                  description: embed_description,
-                  image: { url: image_url },
-                  color: embed_color,
-                  timestamp: embed_timestamp.iso8601
-                }
-              ]
-            )
-          rescue Discordrb::Errors::UnknownError => e
-            tries += 1
-            if tries <= MAX_RETRIES
-              puts "[WARN] Respond failed, retry ##{tries} after 1 sec delay: #{e.message}"
-              sleep 1
-              retry
-            end
-          end
+          # Confirm the submission in the team channel before sending it for review.
+          event.respond(
+            embeds: [
+              {
+                title: "#{embed_title}!",
+                description: embed_description,
+                image: { url: image_url },
+                color: embed_color,
+                timestamp: embed_timestamp.iso8601
+              }
+            ]
+          )
 
-          # Also post to review channel
-          review_channel = event.bot.channel(WAR_REVIEW_CHANNEL_ID)
+          # Mirror the submission to the review channel so Deputy Owners can approve or deny it.
+          review_channel = event.bot.channel(war_review_channel_id)
           msg = review_channel.send_embed do |embed|
             embed.title = "#{embed_title}! React with ✅ to approve or ❌ to deny."
             embed.description = embed_description
@@ -74,23 +56,23 @@ module Commands
             embed.timestamp = embed_timestamp
           end
 
-          # make it easier for admins to reply
+          # Seed the review message with the only reactions this flow understands.
           msg.create_reaction("✅")
           msg.create_reaction("❌")
 
-          # take action on reviews or denials
+          # Wait for the first valid Deputy Owner reaction on this review message.
           handler = bot.add_await!(Discordrb::Events::ReactionAddEvent) do |reaction_event|
-          # Only handle reactions to the review message
+          # Ignore reactions from other messages or channels; this await is scoped in code, not by Discord.
           next unless reaction_event.message.id == msg.id
-          next unless reaction_event.channel.id == WAR_REVIEW_CHANNEL_ID
+          next unless reaction_event.channel.id == war_review_channel_id
 
-          # Role check
+          # Only Deputy Owners can make the approval decision.
           member = reaction_event.server.member(reaction_event.user.id)
           deputy_role = reaction_event.server.roles.find { |r| r.name == "Deputy Owners" }
 
           next unless deputy_role.present? && member&.role?(deputy_role)
 
-          # I can't believe I'm making a switch case for an emoji
+          # The emoji chosen by the reviewer becomes the persisted drop status.
           emoji = reaction_event.emoji.name
 
           case emoji
@@ -106,7 +88,7 @@ module Commands
               next # ignore subsequent reactions after the initial one
             end
 
-            true # resolve the await so we are not awaiting more actions
+            true # Resolve the await so we do not keep listening after a decision.
           end
         end
       end
@@ -117,13 +99,11 @@ module Commands
       drop_name = event.options["drop_name"]
       image_url = event.resolved.attachments[drop_photo_id.to_i].proxy_url
 
-      # determine who owner is
-      # if owner != nil, owner is owner of drop
-      # otherwise the submitter is also the owner
+      # When no owner is supplied, treat the command submitter as the drop owner.
       submitter = event.server.member(event.user.id).display_name
       owner = submitter unless owner.present?
       
-      # create team if not exists
+      # Keep team records aligned to the Discord channel names where drops are submitted.
       team = Team.find_or_initialize_by(name: event.channel.name)
 
       unless team.valid?
@@ -133,7 +113,7 @@ module Commands
 
       team.save
 
-      # look-up item (later we will not create the item because it'll be a pre-set list of items)
+      # Create a placeholder item until drops can be matched against a managed item list.
       item = Item.find_or_initialize_by(name: drop_name, category: 'unknown', points: 0)
       unless item.valid?
         Rails.logger.error("Item #{item.name} is not valid due to: #{item.errors.full_messages.join("\n - ")}. Could not save drop")
@@ -142,10 +122,11 @@ module Commands
 
       item.save
 
-      # set human-readable status
+      # Store a human-readable review outcome instead of the raw boolean used by the handler.
       status = approved ? 'approved' : 'denied'
       puts "final status: #{status}"
 
+      # Persist the full audit trail for leaderboard scoring and later review.
       drop = Drop.new(item: item, team: team, img_url: image_url, owner: owner, submitter: submitter, reviewed_by: reaction_event.user.display_name, status: status)
       unless drop.valid?
         puts "Drop ID #{drop.id} is not valid due to: #{drop.errors.full_messages.join("\n - ")}. Could not save drop"
@@ -154,6 +135,10 @@ module Commands
 
       drop.save
       Rails.logger.info("Saved drop: #{drop.item.name} at ID #{drop.id}")
+    end
+
+    def self.war_review_channel_id
+      (ENV["WAR_REVIEW_CHANNEL_ID"].presence || Rails.application.credentials.dig(:war_review_channel_id)).to_i
     end
   end
 end
