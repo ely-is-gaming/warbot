@@ -19,7 +19,7 @@ RUN bundle install
 COPY . .
 
 # Fix permissions on db and tmp folders
-RUN mkdir -p tmp/cache db
+RUN mkdir -p tmp/cache db/data
 RUN chown -R warbot:warbot tmp db log
 RUN chmod -R 755 tmp db log
 

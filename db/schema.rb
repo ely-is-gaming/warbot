@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_16_154153) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_09_220000) do
   create_table "completed_sets", force: :cascade do |t|
     t.string "name"
     t.integer "team_id", null: false
@@ -57,6 +57,25 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_16_154153) do
     t.integer "modifier"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "pending_drop_reviews", force: :cascade do |t|
+    t.string "review_message_id", null: false
+    t.string "review_channel_id", null: false
+    t.string "team_name", null: false
+    t.string "drop_name", null: false
+    t.string "image_url", null: false
+    t.string "owner"
+    t.string "submitter", null: false
+    t.string "submitter_user_id"
+    t.string "status", default: "pending", null: false
+    t.string "reviewed_by"
+    t.string "reviewed_by_user_id"
+    t.datetime "reviewed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["review_message_id"], name: "index_pending_drop_reviews_on_review_message_id", unique: true
+    t.index ["status"], name: "index_pending_drop_reviews_on_status"
   end
 
   create_table "teams", force: :cascade do |t|

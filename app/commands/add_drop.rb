@@ -1,6 +1,8 @@
 module Commands
   class AddDrop
     def self.register(bot)
+      register_review_reaction_handler(bot)
+
       # Slash command used by players when they receive a drop during war.
       bot.register_application_command(:add_drop, 'Record a received drop to earn points for your team') do |cmd|
         cmd.string(:drop_name, 'Name of received drop', required: true)
@@ -60,38 +62,67 @@ module Commands
           msg.create_reaction("✅")
           msg.create_reaction("❌")
 
-          # Wait for the first valid Deputy Owner reaction on this review message.
-          handler = bot.add_await!(Discordrb::Events::ReactionAddEvent) do |reaction_event|
-          # Ignore reactions from other messages or channels; this await is scoped in code, not by Discord.
-          next unless reaction_event.message.id == msg.id
-          next unless reaction_event.channel.id == war_review_channel_id
-
-          # Only Deputy Owners can make the approval decision.
-          member = reaction_event.server.member(reaction_event.user.id)
-          deputy_role = reaction_event.server.roles.find { |r| r.name == "Deputy Owners" }
-
-          next unless deputy_role.present? && member&.role?(deputy_role)
-
-          # The emoji chosen by the reviewer becomes the persisted drop status.
-          emoji = reaction_event.emoji.name
-
-          case emoji
-            when "✅"
-              Rails.logger.info("#{reaction_event.user.display_name} approved #{embed_title}")
-              review_channel.send_message("✅ #{embed_title} approved by #{reaction_event.user.display_name}!")
-              save_drop(event, reaction_event, msg, owner, true)
-            when "❌"
-              Rails.logger.info("#{reaction_event.user.display_name} denied #{embed_title}")
-              review_channel.send_message("❌ #{embed_title} denied by #{reaction_event.user.display_name}.")
-              save_drop(event, reaction_event, msg, owner, false)
-            else 
-              next # ignore subsequent reactions after the initial one
-            end
-
-            true # Resolve the await so we do not keep listening after a decision.
-          end
+          PendingDropReview.create!(
+            review_message_id: msg.id.to_s,
+            review_channel_id: war_review_channel_id.to_s,
+            team_name: team,
+            drop_name: drop_name,
+            image_url: image_url,
+            owner: owner,
+            submitter: submitter,
+            submitter_user_id: event.user.id.to_s
+          )
         end
       end
+    end
+
+    def self.register_review_reaction_handler(bot)
+      @review_reaction_handler_bots ||= {}
+      return if @review_reaction_handler_bots[bot.object_id]
+
+      @review_reaction_handler_bots[bot.object_id] = true
+
+      bot.reaction_add do |reaction_event|
+        handle_review_reaction(reaction_event)
+      end
+    end
+
+    def self.handle_review_reaction(reaction_event)
+      emoji = reaction_event.emoji.name
+      return unless ["✅", "❌"].include?(emoji)
+
+      pending_review = PendingDropReview.pending.find_by(
+        review_message_id: reaction_event.message.id.to_s,
+        review_channel_id: reaction_event.channel.id.to_s
+      )
+      return unless pending_review
+
+      member = reaction_event.server.member(reaction_event.user.id)
+      deputy_role = reaction_event.server.roles.find { |r| r.name == "Deputy Owners" }
+      return unless deputy_role.present? && member&.role?(deputy_role)
+
+      approved = emoji == "✅"
+      status = approved ? "approved" : "denied"
+      processed = false
+
+      pending_review.with_lock do
+        pending_review.reload
+        next unless pending_review.pending?
+
+        save_drop_from_review!(pending_review, reaction_event, approved)
+        pending_review.update!(
+          status: status,
+          reviewed_by: reaction_event.user.display_name,
+          reviewed_by_user_id: reaction_event.user.id.to_s,
+          reviewed_at: Time.current
+        )
+        processed = true
+      end
+
+      return unless processed
+
+      Rails.logger.info("#{reaction_event.user.display_name} #{status} #{pending_review.drop_name} received from ##{pending_review.team_name}")
+      reaction_event.channel.send_message("#{approved ? "✅" : "❌"} #{pending_review.drop_name} received from ##{pending_review.team_name} #{status} by #{reaction_event.user.display_name}!")
     end
 
     def self.save_drop(event, reaction_event, message, owner=nil, approved)
@@ -102,39 +133,66 @@ module Commands
       # When no owner is supplied, treat the command submitter as the drop owner.
       submitter = event.server.member(event.user.id).display_name
       owner = submitter unless owner.present?
-      
+
+      save_drop_from_attributes!(
+        team_name: event.channel.name,
+        drop_name: drop_name,
+        image_url: image_url,
+        owner: owner,
+        submitter: submitter,
+        reviewed_by: reaction_event.user.display_name,
+        approved: approved
+      )
+    end
+
+    def self.save_drop_from_review!(pending_review, reaction_event, approved)
+      owner = pending_review.owner.presence || pending_review.submitter
+
+      save_drop_from_attributes!(
+        team_name: pending_review.team_name,
+        drop_name: pending_review.drop_name,
+        image_url: pending_review.image_url,
+        owner: owner,
+        submitter: pending_review.submitter,
+        reviewed_by: reaction_event.user.display_name,
+        approved: approved
+      )
+    end
+
+    def self.save_drop_from_attributes!(team_name:, drop_name:, image_url:, owner:, submitter:, reviewed_by:, approved:)
       # Keep team records aligned to the Discord channel names where drops are submitted.
-      team = Team.find_or_initialize_by(name: event.channel.name)
+      team = Team.find_or_initialize_by(name: team_name)
 
       unless team.valid?
         puts "Team #{team.name} is not valid due to: #{team.errors.full_messages.join("\n - ")}. Could not save drop"
-        return
+        raise ActiveRecord::RecordInvalid, team
       end
 
-      team.save
+      team.save!
 
       # Create a placeholder item until drops can be matched against a managed item list.
       item = Item.find_or_initialize_by(name: drop_name, category: 'unknown', points: 0)
       unless item.valid?
         Rails.logger.error("Item #{item.name} is not valid due to: #{item.errors.full_messages.join("\n - ")}. Could not save drop")
-        return
+        raise ActiveRecord::RecordInvalid, item
       end
 
-      item.save
+      item.save!
 
       # Store a human-readable review outcome instead of the raw boolean used by the handler.
       status = approved ? 'approved' : 'denied'
       puts "final status: #{status}"
 
       # Persist the full audit trail for leaderboard scoring and later review.
-      drop = Drop.new(item: item, team: team, img_url: image_url, owner: owner, submitter: submitter, reviewed_by: reaction_event.user.display_name, status: status)
+      drop = Drop.new(item: item, team: team, img_url: image_url, owner: owner, submitter: submitter, reviewed_by: reviewed_by, status: status)
       unless drop.valid?
         puts "Drop ID #{drop.id} is not valid due to: #{drop.errors.full_messages.join("\n - ")}. Could not save drop"
-        return
+        raise ActiveRecord::RecordInvalid, drop
       end
 
-      drop.save
+      drop.save!
       Rails.logger.info("Saved drop: #{drop.item.name} at ID #{drop.id}")
+      drop
     end
 
     def self.war_review_channel_id

@@ -6,6 +6,7 @@ services:
         BUNDLE_WITHOUT: ""
     environment:
       RAILS_ENV: development
+      TILE_MODE: ${TILE_MODE:-false}
       REDIS_URL: redis://redis:6379/0
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:?set RAILS_MASTER_KEY}
     depends_on:
@@ -13,6 +14,8 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    volumes:
+      - app-db-data:/app/db/data
 
   redis:
     image: valkey/valkey:9.0.3-alpine
@@ -26,4 +29,5 @@ services:
       - redis-data:/data
 
 volumes:
+  app-db-data:
   redis-data:

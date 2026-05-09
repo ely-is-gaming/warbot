@@ -1,5 +1,6 @@
 require 'discordrb'
 
+require Rails.root.join('app/services/feature_flags.rb')
 require Rails.root.join('app/services/command_queue.rb')
 require Rails.root.join('app/commands/add_drop.rb')
 require Rails.root.join('app/commands/export_drops.rb')
@@ -12,6 +13,14 @@ require Rails.root.join('app/commands/roll_leaderboard.rb')
 
 
 class DiscordBot
+  TILE_COMMANDS = [
+    ::Commands::Roll,
+    ::Commands::RollHistory,
+    ::Commands::CurrentTile,
+    ::Commands::SetTile,
+    ::Commands::RollLeaderboard
+  ].freeze
+
   def self.run
     Rails.logger.info("Starting Discord bot for client #{client_id}")
 
@@ -23,15 +32,7 @@ class DiscordBot
 
     CommandQueue.install!(bot)
 
-    # Register each command from its own module
-    ::Commands::AddDrop.register(bot)
-    ::Commands::ExportDrops.register(bot)
-    ::Commands::UpdateDrop.register(bot)
-    ::Commands::Roll.register(bot)
-    ::Commands::RollHistory.register(bot)
-    ::Commands::CurrentTile.register(bot)
-    ::Commands::SetTile.register(bot)
-    ::Commands::RollLeaderboard.register(bot)
+    register_commands(bot)
 
     CommandQueue.start(bot)
 
@@ -52,5 +53,17 @@ class DiscordBot
 
   def self.guild_id
     (ENV["DISCORD_GUILD_ID"].presence || Rails.application.credentials.dig(:discord, :guild_id)).to_i
+  end
+
+  def self.register_commands(bot)
+    ::Commands::AddDrop.register(bot)
+    ::Commands::ExportDrops.register(bot)
+    ::Commands::UpdateDrop.register(bot)
+
+    if FeatureFlags.tile_mode?
+      TILE_COMMANDS.each { |command| command.register(bot) }
+    else
+      Rails.logger.info("Tile mode is disabled; skipping tile command registration")
+    end
   end
 end

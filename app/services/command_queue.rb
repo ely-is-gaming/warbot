@@ -2,6 +2,8 @@ require 'json'
 require 'securerandom'
 require 'redis'
 
+require Rails.root.join('app/services/feature_flags.rb')
+
 class CommandQueue
   MAX_ATTEMPTS = 3
   RETRY_DELAY_SECONDS = 2
@@ -14,7 +16,17 @@ class CommandQueue
     roll_history
     roll_leaderboard
     set_tile
+    undo_roll
     update_drop
+  ].freeze
+
+  TILE_COMMANDS = %i[
+    roll
+    current_tile
+    roll_history
+    roll_leaderboard
+    set_tile
+    undo_roll
   ].freeze
 
   class << self
@@ -45,6 +57,11 @@ class CommandQueue
     end
 
     def enqueue(command_name:, event:, ephemeral:)
+      unless command_enabled?(command_name)
+        event.respond(content: "Tile mode is disabled, so /#{command_name} is not available.", ephemeral: true)
+        return
+      end
+
       acknowledge(event, ephemeral)
 
       payload = serialize(command_name, event, ephemeral)
@@ -62,7 +79,7 @@ class CommandQueue
 
       @worker = Thread.new do
         Thread.current.name = 'command-queue' if Thread.current.respond_to?(:name=)
-        Rails.logger.info("Command queue worker started with Redis at #{ENV.fetch('REDIS_URL', 'redis://redis:6379/0')}")
+        Rails.logger.info("Command queue worker started with Redis at #{redis_url}")
         recover_processing_jobs
 
         loop do
@@ -82,19 +99,31 @@ class CommandQueue
       PRIVATE_COMMANDS.include?(command_name.to_sym)
     end
 
+    def command_enabled?(command_name)
+      !TILE_COMMANDS.include?(command_name.to_sym) || FeatureFlags.tile_mode?
+    end
+
     def queue_depth
       redis.llen(QUEUE_KEY)
     end
 
     def redis
-      @redis ||= Redis.new(url: ENV.fetch('REDIS_URL', 'redis://redis:6379/0'))
+      @redis ||= Redis.new(url: redis_url)
     end
 
     def worker
       @worker
     end
 
+    def redis_url
+      ENV.fetch('REDIS_URL') { default_redis_url }
+    end
+
     private
+
+    def default_redis_url
+      Rails.env.development? ? 'redis://localhost:6379/0' : 'redis://redis:6379/0'
+    end
 
     def handlers
       @handlers ||= {}
@@ -197,7 +226,7 @@ class CommandQueue
 
     def reconnect_redis(error)
       Rails.logger.error(
-        "Command queue Redis unavailable at #{ENV.fetch('REDIS_URL', 'redis://redis:6379/0')}: #{error.class}: #{error.message}. Retrying in #{REDIS_RECONNECT_DELAY_SECONDS} seconds."
+        "Command queue Redis unavailable at #{redis_url}: #{error.class}: #{error.message}. Retrying in #{REDIS_RECONNECT_DELAY_SECONDS} seconds."
       )
       @redis&.close
     rescue StandardError

@@ -3,6 +3,8 @@ require 'rails_helper'
 RSpec.describe CommandQueue do
   describe '.enqueue' do
     it 'persists a serialized command payload to Redis' do
+      allow(described_class).to receive(:command_enabled?).with(:set_tile).and_return(true)
+
       redis = instance_double(Redis, lpush: 1, llen: 1)
       interaction = double('interaction', id: 100, application_id: 200, token: 'token')
       channel = double('channel', name: 'blue-team')
@@ -32,6 +34,41 @@ RSpec.describe CommandQueue do
         expect(payload['options']).to eq('tile_index' => 3)
         expect(payload['interaction']).to include('id' => 100, 'application_id' => 200, 'token' => 'token')
       end
+    end
+
+    it 'rejects tile commands without queueing when tile mode is disabled' do
+      redis = instance_double(Redis, lpush: 1, llen: 1)
+      event = instance_double(
+        Discordrb::Events::ApplicationCommandEvent,
+        respond: nil
+      )
+
+      allow(described_class).to receive(:redis).and_return(redis)
+      allow(FeatureFlags).to receive(:tile_mode?).and_return(false)
+
+      described_class.enqueue(command_name: :roll, event: event, ephemeral: false)
+
+      expect(event).to have_received(:respond).with(
+        content: "Tile mode is disabled, so /roll is not available.",
+        ephemeral: true
+      )
+      expect(redis).not_to have_received(:lpush)
+    end
+  end
+
+  describe '.command_enabled?' do
+    it 'allows non-tile commands regardless of tile mode' do
+      allow(FeatureFlags).to receive(:tile_mode?).and_return(false)
+
+      expect(described_class.command_enabled?(:add_drop)).to be true
+    end
+
+    it 'requires tile mode for tile commands' do
+      allow(FeatureFlags).to receive(:tile_mode?).and_return(false)
+      expect(described_class.command_enabled?(:current_tile)).to be false
+
+      allow(FeatureFlags).to receive(:tile_mode?).and_return(true)
+      expect(described_class.command_enabled?(:current_tile)).to be true
     end
   end
 
