@@ -65,26 +65,32 @@ container rebuilds/recreates.
 On TrueNAS SCALE, persist both the app database and Redis queue:
 
 1. Create a dataset for the app database, for example
-   `/mnt/<pool>/apps/war-bot/db-data`.
+   `/mnt/ssd/warbot/data`.
 2. Mount that dataset into the app container at `/app/db/data`.
 3. Create a dataset for Redis/Valkey, for example
-   `/mnt/<pool>/apps/war-bot/redis-data`.
+   `/mnt/ssd/warbot/redis-data`.
 4. Mount that dataset into the Redis/Valkey container at `/data`.
 5. Set app environment variables:
 
 ```sh
 RAILS_ENV=production
+RAILS_LOG_TO_STDOUT=true
+RAILS_SERVE_STATIC_FILES=true
 TILE_MODE=false
-REDIS_URL=redis://<redis-service-name>:6379/0
-RAILS_MASTER_KEY=<your Rails master key>
+REDIS_URL=redis://warbot-redis:6379/0
 START_DISCORD_BOT=true
 ```
 
-If your Redis/Valkey app is named `war-bot-redis`, the app `REDIS_URL` would be:
+Mount the Rails production credentials key as a file:
 
-```sh
-REDIS_URL=redis://war-bot-redis:6379/0
+```text
+/mnt/ssd/warbot/credentials/production.key -> /app/config/credentials/production.key
 ```
+
+TrueNAS SCALE can run the app and Redis together using YAML. See
+`deploy/truenas.yaml` for a ready-to-paste Custom App YAML. When both services
+are in that YAML, `REDIS_URL=redis://warbot-redis:6379/0` works because
+`warbot-redis` is the Redis service name on the shared app network.
 
 Do not use `docker compose down -v` or delete the TrueNAS datasets unless you
 intend to delete the persisted drops database and command queue.

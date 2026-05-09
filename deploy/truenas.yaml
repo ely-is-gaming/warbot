@@ -1,0 +1,48 @@
+# TrueNAS SCALE Custom App YAML.
+#
+# Replace the warbot image with the image you pushed, then paste this into
+# Apps > Discover Apps > Custom App > Install via YAML.
+services:
+  warbot:
+    image: docker.io/elyisgaming/vannaka-bot:latest
+    restart: unless-stopped
+    depends_on:
+      warbot-redis:
+        condition: service_healthy
+    environment:
+      RAILS_ENV: production
+      RAILS_LOG_TO_STDOUT: "true"
+      RAILS_SERVE_STATIC_FILES: "true"
+      TILE_MODE: "false"
+      START_DISCORD_BOT: "true"
+      REDIS_URL: redis://warbot-redis:6379/0
+    ports:
+      - "3000:3000"
+    volumes:
+      - type: bind
+        source: /mnt/ssd/warbot/credentials/production.key
+        target: /app/config/credentials/production.key
+        read_only: true
+      - type: bind
+        source: /mnt/ssd/warbot/data
+        target: /app/db/data
+
+  warbot-redis:
+    image: valkey/valkey:9.0.3-alpine
+    restart: unless-stopped
+    command:
+      - valkey-server
+      - --appendonly
+      - "yes"
+    healthcheck:
+      test:
+        - CMD
+        - valkey-cli
+        - ping
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - type: bind
+        source: /mnt/ssd/warbot/redis-data
+        target: /data
